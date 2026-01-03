@@ -24,6 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from m5.objects.Tags import *
 from m5.params import *
 from m5.proxy import *
 from m5.SimObject import SimObject
@@ -175,3 +176,54 @@ class WeightedLRURP(LRURP):
     type = "WeightedLRURP"
     cxx_class = "gem5::replacement_policy::WeightedLRU"
     cxx_header = "mem/cache/replacement_policies/weighted_lru_rp.hh"
+
+
+class MockingjayRP(BaseReplacementPolicy):
+    type = "MockingjayRP"
+    cxx_class = "gem5::replacement_policy::Mockingjay"
+    cxx_header = "mem/cache/replacement_policies/mockingjay_rp.hh"
+
+    num_contexts = Param.Unsigned("Number of contexts")
+
+    cache_size = Param.MemorySize(Parent.size, "Size of the parent cache")
+    cache_assoc = Param.Int(Parent.assoc, "Associativity of the parent cache")
+    cache_block_size = Param.Int(
+        Parent.cache_line_size, "Block size (usually 64)"
+    )
+
+    pc_signature_bit_length = Param.Unsigned(
+        8, "Number of bits in signature to fold pc into"
+    )
+    reuse_distance_granularity = Param.Unsigned(
+        8, "Granularity of ETR to store predicted reuse distance"
+    )
+    infinite_reuse_distance = Param.Unsigned(128, "Infinite reuse distance")
+    max_reuse_distance = Param.Unsigned(104, "Maximum reuse distance")
+    maximum_timestamp = Param.Unsigned(
+        256, "Maximum timestamp for sampled set"
+    )
+    flexmin_penalty = Param.Float(
+        2.0, "Flexmin penalty to be applied to prefetched hits"
+    )
+    temporal_difference = Param.Unsigned(
+        16,
+        "Sampled must be larger than this value to increase/decrease prediction",
+    )
+
+    sampled_cache_entries = Param.MemorySize(
+        "256", "Number of entries in the sampled cache"
+    )
+    sampled_cache_assoc = Param.Unsigned(
+        8, "Associativity of the access map table"
+    )
+    sampled_cache_indexing_policy = Param.TaggedIndexingPolicy(
+        TaggedSampleSetAssociative(
+            entry_size=1,
+            assoc=Parent.sampled_cache_assoc,
+            size=Parent.sampled_cache_entries,
+        ),
+        "Indexing policy of the sampled cache",
+    )
+    sampled_cache_replacement_policy = Param.BaseReplacementPolicy(
+        LRURP(), "Replacement policy of the access map table"
+    )

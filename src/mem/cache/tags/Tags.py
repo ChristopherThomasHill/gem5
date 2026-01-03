@@ -62,6 +62,23 @@ class TaggedSetAssociative(TaggedIndexingPolicy):
     entry_size = Param.Int(Parent.entry_size, "entry size in bytes")
 
 
+class TaggedSampleSetAssociative(TaggedSetAssociative):
+    type = "TaggedSampleSetAssociative"
+    cxx_class = "gem5::TaggedSampleSetAssociative"
+    cxx_header = "mem/cache/tags/tagged_entry.hh"
+
+    sampling_from_assoc = Param.Int(
+        Parent.assoc, "associativity of sets you are sampling"
+    )
+    sampling_from_size = Param.Int(
+        Parent.size, "capacity in bytes of cache you are sampling"
+    )
+    sampling_from_entry_size = Param.Int(
+        Parent.system.cache_line_size,
+        "entry size in bytes of cache you are sampling",
+    )
+
+
 class BaseTags(ClockedObject):
     type = "BaseTags"
     abstract = True

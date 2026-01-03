@@ -38,6 +38,7 @@ SimObject(
         "FALRU",
         "TaggedIndexingPolicy",
         "TaggedSetAssociative",
+        "TaggedSampleSetAssociative",
     ],
 )
 

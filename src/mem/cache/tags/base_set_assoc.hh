@@ -146,8 +146,15 @@ class BaseSetAssoc : public BaseTags
             // Update number of references to accessed block
             blk->increaseRefCount();
 
+            std::vector<ReplaceableEntry*> entries = indexingPolicy->getPossibleEntries({pkt->getAddr(), pkt->isSecure()});
+
+            if (partitionManager) {
+                auto partition_id = partitionManager->readPacketPartitionID(pkt);
+                partitionManager->filterByPartition(entries, partition_id);
+            }
+
             // Update replacement data of accessed block
-            replacementPolicy->touch(blk->replacementData, pkt);
+            replacementPolicy->touch(blk->replacementData, pkt, entries);
         }
 
         // The tag lookup latency is the same for a hit or a miss
@@ -210,8 +217,15 @@ class BaseSetAssoc : public BaseTags
             partitionManager->notifyAcquire(partition_id);
         }
 
+        std::vector<ReplaceableEntry*> entries = indexingPolicy->getPossibleEntries({pkt->getAddr(), pkt->isSecure()});
+
+        if (partitionManager) {
+            auto partition_id = partitionManager->readPacketPartitionID(pkt);
+            partitionManager->filterByPartition(entries, partition_id);
+        }
+
         // Update replacement policy
-        replacementPolicy->reset(blk->replacementData, pkt);
+        replacementPolicy->reset(blk->replacementData, pkt, entries);
     }
 
     void moveBlock(CacheBlk *src_blk, CacheBlk *dest_blk) override;

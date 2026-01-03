@@ -41,6 +41,7 @@
 #ifndef __CACHE_TAGGED_ENTRY_HH__
 #define __CACHE_TAGGED_ENTRY_HH__
 
+#include <random>
 #include <cassert>
 
 #include "base/cprintf.hh"
@@ -49,6 +50,7 @@
 #include "mem/cache/tags/indexing_policies/base.hh"
 #include "params/TaggedIndexingPolicy.hh"
 #include "params/TaggedSetAssociative.hh"
+#include "params/TaggedSampleSetAssociative.hh"
 
 namespace gem5
 {
@@ -99,6 +101,62 @@ class TaggedSetAssociative : public TaggedIndexingPolicy
                    const ReplaceableEntry *entry) const override
     {
         return (key.address << tagShift) | (entry->getSet() << setShift);
+    }
+};
+
+class TaggedSampleSetAssociative : public TaggedSetAssociative
+{
+  protected:
+    const int sampledSetMask;
+    const int sampledSetShift;
+
+    virtual uint32_t
+    extractSet(const KeyType &key) const
+    {
+        return (key.address >> setShift) & sampledSetMask;
+    }
+
+    std::unordered_map<uint32_t, uint32_t> sampledSetMapping;
+
+  public:
+    PARAMS(TaggedSampleSetAssociative);
+    TaggedSampleSetAssociative(const Params &p)
+      : TaggedSetAssociative(p),
+        sampledSetMask(((p.sampling_from_size / p.sampling_from_entry_size) / p.sampling_from_assoc) - 1),
+        sampledSetShift(floorLog2(p.sampling_from_entry_size))
+    {
+        uint32_t sampled_set_num = 0;
+        uint32_t sampled_from_sets = ((p.sampling_from_size / p.sampling_from_entry_size) / p.sampling_from_assoc);
+
+        static std::mt19937 rng(12);
+        std::uniform_int_distribution<int> dist(0, sampled_from_sets);
+
+        while (sampled_set_num < numSets) {
+            uint32_t random_set = dist(rng);
+            if (!sampledSetMapping.count(random_set)) {
+                sampledSetMapping[random_set] = sampled_set_num;
+                sampled_set_num += 1;
+            }
+        }
+    }
+
+    std::vector<ReplaceableEntry*>
+    getPossibleEntries(const KeyType &key) const override
+    {
+       uint32_t set_associative_set = extractSet(key);
+
+        if (sampledSetMapping.count(set_associative_set)) {
+            return sets[sampledSetMapping.at(set_associative_set)];
+        } else {
+            return {}; // not a sampled set
+        }
+    }
+
+    Addr
+    regenerateAddr(const KeyType &key,
+                   const ReplaceableEntry *entry) const override
+    {
+        panic("regenerate addr not supported for tagged sample set associative");
     }
 };
 

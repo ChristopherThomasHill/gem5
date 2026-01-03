@@ -71,7 +71,13 @@ class Base : public SimObject
      *
      * @param replacement_data Replacement data to be touched.
      * @param pkt Packet that generated this access.
+     * @param canidates Associated eligible victims with this access.
      */
+    virtual void touch(const std::shared_ptr<ReplacementData>&
+        replacement_data, const PacketPtr pkt, const ReplacementCandidates& candidates)
+    {
+        touch(replacement_data, pkt);
+    }
     virtual void touch(const std::shared_ptr<ReplacementData>&
         replacement_data, const PacketPtr pkt)
     {
@@ -85,7 +91,13 @@ class Base : public SimObject
      *
      * @param replacement_data Replacement data to be reset.
      * @param pkt Packet that generated this access.
+     * @param canidates Associated eligible victims with this access.
      */
+    virtual void reset(const std::shared_ptr<ReplacementData>&
+        replacement_data, const PacketPtr pkt, const ReplacementCandidates& candidates)
+    {
+        reset(replacement_data, pkt);
+    }
     virtual void reset(const std::shared_ptr<ReplacementData>&
         replacement_data, const PacketPtr pkt)
     {
@@ -106,8 +118,14 @@ class Base : public SimObject
     /**
      * Instantiate a replacement data entry.
      *
+     * @param set the set that this entry belongs to
+     * @param way the way that this entry belongs to
      * @return A shared pointer to the new replacement data.
      */
+    virtual std::shared_ptr<ReplacementData> instantiateEntry(uint32_t set, uint32_t way)
+    {
+        return instantiateEntry();
+    }
     virtual std::shared_ptr<ReplacementData> instantiateEntry() = 0;
 };
 
