@@ -41,7 +41,7 @@ Mockingjay::Mockingjay(const Params &p)
     etrAgingClock(numCacheSets, 0),
     setTimestamp(numCacheSets, 0)
 {
-    uint8_t totalSignatures = std::exp2(pcSignatureBitLength + std::log2(numContexts) + 2 /*demand + hit*/);
+    uint32_t totalSignatures = std::exp2(pcSignatureBitLength + ceilLog2(numContexts) + 2 /*demand + hit*/);
 
     if (numContexts == 0) {
         reusePredictor.assign(totalSignatures, 0);
@@ -55,16 +55,16 @@ Mockingjay::buildMockingjaySignature(const PacketPtr pkt, bool hit)
 {
     MockingjaySignature signature = hit ? 1 : 0;
 
-    assert(pkt->req->contextId() < numContexts);
+    panic_if(pkt->req->hasContextId() && pkt->req->contextId() >= numContexts, "Have a context id greater than number of contexts");
     signature <<= ceilLog2(numContexts);
-    signature |= pkt->req->contextId();
+    signature |= pkt->req->hasContextId() ? pkt->req->contextId() : 0 /*no context value*/;
 
     signature <<= 1;
-    signature |= pkt->isDemand() ? 1 : 0;
+    signature |= (pkt->req->taskId() == context_switch_task_id::TaskId::Prefetcher) ? 1 : 0;
 
     // Construct and append fold of program counter
     uint64_t mask = (1ULL << pcSignatureBitLength) - 1;
-    uint64_t value = pkt->req->hasPC();
+    uint64_t value = pkt->req->hasPC() ? pkt->req->getPC() : 0 /*no pc value*/;
     uint64_t pcFold = 0;
 
     while (value > 0) {
@@ -75,7 +75,7 @@ Mockingjay::buildMockingjaySignature(const PacketPtr pkt, bool hit)
     signature <<= pcSignatureBitLength;
     signature |= pcFold;
 
-    assert(signature < reusePredictor.size());
+    panic_if(signature >= reusePredictor.size(), "signature isn't within the size of reuse predictor");
 
     return signature;
 }
@@ -89,10 +89,10 @@ Mockingjay::trainAccess(const PacketPtr pkt, MockingjaySignature accessSignature
 
     if (sample_entry != nullptr) {
         MockingjaySignature last_signature = sample_entry->signature;
-        uint16_t time_elapsed = (sample_entry->timestamp + maximumTimestamp - setTimestamp[set]) % maximumTimestamp;
+        uint16_t time_elapsed = (setTimestamp[set] + maximumTimestamp - sample_entry->timestamp) % maximumTimestamp;
 
         if (time_elapsed <= infiniteReuseDistane) {
-            if (pkt->req->isPrefetch()) {
+            if (pkt->req->taskId() == context_switch_task_id::TaskId::Prefetcher) {
                 time_elapsed = time_elapsed * flexminPenalty;
             }
 
@@ -146,7 +146,7 @@ void
 Mockingjay::invalidate(const std::shared_ptr<ReplacementData>& replacement_data) {
     std::shared_ptr<MockingjayReplData> casted_replacement_data = std::static_pointer_cast<MockingjayReplData>(replacement_data);
     casted_replacement_data->valid = false;
-    casted_replacement_data->etr = 0;
+    casted_replacement_data->etr = 0;    
 }
 
 void
@@ -155,7 +155,9 @@ Mockingjay::touch(const std::shared_ptr<ReplacementData>& replacement_data, cons
     std::shared_ptr<MockingjayReplData> casted_replacement_data =
         std::static_pointer_cast<MockingjayReplData>(replacement_data);
 
-    if (!pkt->isRequest() || !pkt->req->hasPC() || !pkt->req->hasContextId()) {
+    panic_if(!pkt->req, "packet doesn't have a request in touch");
+
+    if (pkt->isEviction()) {
         return;
     }
 
@@ -187,8 +189,12 @@ Mockingjay::reset(const std::shared_ptr<ReplacementData>& replacement_data, cons
 {
     std::shared_ptr<MockingjayReplData> casted_replacement_data =
         std::static_pointer_cast<MockingjayReplData>(replacement_data);
+    
+    panic_if(!pkt->req, "packet doesn't have a request in reset");
 
-    if (!pkt->isRequest() || !pkt->req->hasPC() || !pkt->req->hasContextId()) {
+    if (pkt->isEviction()) {
+        casted_replacement_data->etr = -1 * (infiniteReuseDistane / reuseDistanceGranularity);
+        casted_replacement_data->valid = true;
         return;
     }
 

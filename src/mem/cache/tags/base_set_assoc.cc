@@ -81,7 +81,7 @@ BaseSetAssoc::tagsInit()
         blk->data = &dataBlks[blkSize*blk_index];
 
         // Associate a replacement data entry to the block
-        blk->replacementData = replacementPolicy->instantiateEntry();
+        blk->replacementData = replacementPolicy->instantiateEntry(blk->getSet(), blk->getWay());
 
         // This is not used as of now but we set it for security
         blk->registerTagExtractor(genTagExtractor(indexingPolicy));

@@ -211,10 +211,10 @@ class MockingjayRP(BaseReplacementPolicy):
     )
 
     sampled_cache_entries = Param.MemorySize(
-        "256", "Number of entries in the sampled cache"
+        "4096", "Number of entries in the sampled cache"
     )
     sampled_cache_assoc = Param.Unsigned(
-        8, "Associativity of the access map table"
+        128, "Associativity of the access map table"
     )
     sampled_cache_indexing_policy = Param.TaggedIndexingPolicy(
         TaggedSampleSetAssociative(

@@ -110,10 +110,10 @@ class TaggedSampleSetAssociative : public TaggedSetAssociative
     const int sampledSetMask;
     const int sampledSetShift;
 
-    virtual uint32_t
-    extractSet(const KeyType &key) const
+    uint32_t
+    extractSet(const KeyType &key) const override
     {
-        return (key.address >> setShift) & sampledSetMask;
+        return (key.address >> sampledSetShift) & sampledSetMask;
     }
 
     std::unordered_map<uint32_t, uint32_t> sampledSetMapping;
