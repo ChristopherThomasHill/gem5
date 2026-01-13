@@ -259,6 +259,8 @@ class Request : public Extensible<Request>
         /** TLBI_EXT_SYNC_COMP seems to be the largest value
             of FlagsType, so HAS_NO_ADDR's value is that << 1 */
         HAS_NO_ADDR                = 0x0001000000000000,
+        /** Looking up some value for a prefetcher */
+        PREFETCH_LOOKUP            = 0x0002000000000000,
     };
     static const FlagsType STORE_NO_DATA = CACHE_BLOCK_ZERO |
         CLEAN | INVALIDATE;
@@ -1021,6 +1023,7 @@ class Request : public Extensible<Request>
     bool isStrictlyOrdered() const { return _flags.isSet(STRICT_ORDER); }
     bool isInstFetch() const { return _flags.isSet(INST_FETCH); }
     bool hasNoAddr() const { return _flags.isSet(HAS_NO_ADDR); }
+    bool isPrefetchLookup() const { return _flags.isSet(PREFETCH_LOOKUP); }
     bool
     isPrefetch() const
     {

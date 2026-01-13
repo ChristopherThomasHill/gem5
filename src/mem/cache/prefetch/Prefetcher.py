@@ -727,3 +727,17 @@ class PIFPrefetcher(QueuedPrefetcher):
         self.addEvent(
             HWPProbeEventRetiredInsts(self, simObj, "RetiredInstsPC")
         )
+
+
+class LookupBasedPrefetcher(QueuedPrefetcher):
+    type = "LookupBasedPrefetcher"
+    abstract = True
+    cxx_class = "gem5::prefetch::LookupBased"
+    cxx_header = "mem/cache/prefetch/lookup_based.hh"
+    mem_side = RequestPort("Downstream port closer to memory")
+
+
+class TriagePrefetcher(LookupBasedPrefetcher):
+    type = "TriagePrefetcher"
+    cxx_class = "gem5::prefetch::Triage"
+    cxx_header = "mem/cache/prefetch/triage.hh"
